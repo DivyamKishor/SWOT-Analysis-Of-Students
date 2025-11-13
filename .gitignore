@@ -1,0 +1,69 @@
+# -----------------------------
+# PYTHON
+# -----------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# -----------------------------
+# VENV / ENVIRONMENTS
+# -----------------------------
+.venv/
+venv/
+env/
+
+# -----------------------------
+# JUPYTER
+# -----------------------------
+.ipynb_checkpoints/
+
+# -----------------------------
+# DATA FILES
+# -----------------------------
+*.csv
+*.xlsx
+*.xls
+*.json
+
+cleaned_data/
+student_data/
+merged_output.csv
+poattainments.csv
+attendances.csv
+externals.csv
+iats.csv
+internships.csv
+activitydatas.csv
+clubevents.csv
+academicdetails.csv
+
+# -----------------------------
+# MODEL ARTIFACTS
+# -----------------------------
+models/
+*.pkl
+*.joblib
+
+# -----------------------------
+# GENERATED OUTPUT
+# -----------------------------
+spider_charts/
+spider_charts_hybrid/
+*.png
+
+student_skill_analysis*.csv
+student_skill_analysis_hybrid.csv
+master_student_data*.csv
+
+# -----------------------------
+# SYSTEM
+# -----------------------------
+.DS_Store
+Thumbs.db
+
+# -----------------------------
+# IDE FILES
+# -----------------------------
+.vscode/
+.idea/
