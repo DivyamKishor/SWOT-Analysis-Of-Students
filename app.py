@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import json
 import warnings
+import requests
 warnings.filterwarnings('ignore')
 
 st.set_page_config(page_title="Student SWOT Analyzer", page_icon="🎓", layout="wide", initial_sidebar_state="expanded")
@@ -277,7 +278,16 @@ st.markdown('<div class="hero"><h1>🎓 Student <span class="accent">SWOT</span>
 
 with st.sidebar:
     st.markdown("### 📂 Data Input")
-    uploaded = st.file_uploader("Upload master_student_data.csv", type=["csv"])
+    query_params = st.query_params
+    mentor_id = query_params.get("mentor_id")
+    token = query_params.get("token")
+    
+    if mentor_id:
+        st.success(f"Connected to backend for mentor: {mentor_id}")
+        uploaded = True # Bypass upload
+    else:
+        uploaded = st.file_uploader("Upload master_student_data.csv", type=["csv"])
+
     st.markdown("---")
     st.markdown("### 🔍 Filter & Sort")
     risk_filter = st.selectbox("Risk Level", ["All", "High Risk (>70)", "Medium Risk (40-70)", "Low Risk (<40)"])
@@ -286,22 +296,45 @@ with st.sidebar:
     st.markdown("<p style='color:#475569;font-size:0.75rem'>SWOT Analysis Tool · v1.0</p>", unsafe_allow_html=True)
 
 if uploaded:
-    raw_df = pd.read_csv(uploaded)
-    df = process_df(raw_df.to_json())
+    if mentor_id:
+        try:
+            # Fetch from Node.js backend
+            headers = {}
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+            response = requests.get(f"http://localhost:8000/api/mentorship/{mentor_id}/swot-data", headers=headers)
+            if response.status_code == 200:
+                raw_df = pd.DataFrame(response.json())
+            else:
+                st.error(f"Failed to fetch data from backend. Status Code: {response.status_code}")
+                raw_df = pd.DataFrame()
+        except Exception as e:
+            st.error(f"Backend connection error: {e}")
+            raw_df = pd.DataFrame()
+    else:
+        raw_df = pd.read_csv(uploaded)
+        
+    if not raw_df.empty:
+        df = process_df(raw_df.to_json())
 
-    view_df = df.copy()
-    if risk_filter == "High Risk (>70)": view_df = view_df[view_df['ml_risk_probability'] > 70]
-    elif risk_filter == "Medium Risk (40-70)": view_df = view_df[(view_df['ml_risk_probability'] >= 40) & (view_df['ml_risk_probability'] <= 70)]
-    elif risk_filter == "Low Risk (<40)": view_df = view_df[view_df['ml_risk_probability'] < 40]
-    if sort_by == "Overall Score ↓": view_df = view_df.sort_values('overall_performance_index', ascending=False)
-    elif sort_by == "Overall Score ↑": view_df = view_df.sort_values('overall_performance_index', ascending=True)
-    elif sort_by == "Name A-Z": view_df = view_df.sort_values('student_name' if 'student_name' in view_df.columns else view_df.columns[0])
-    elif sort_by == "Risk ↓": view_df = view_df.sort_values('ml_risk_probability', ascending=False)
+        view_df = df.copy()
+        if risk_filter == "High Risk (>70)": view_df = view_df[view_df['ml_risk_probability'] > 70]
+        elif risk_filter == "Medium Risk (40-70)": view_df = view_df[(view_df['ml_risk_probability'] <= 70) & (view_df['ml_risk_probability'] >= 40)]
+        elif risk_filter == "Low Risk (<40)": view_df = view_df[view_df['ml_risk_probability'] < 40]
+
+        if sort_by == "Overall Score ↓": view_df = view_df.sort_values('overall_performance_index', ascending=False)
+        elif sort_by == "Overall Score ↑": view_df = view_df.sort_values('overall_performance_index', ascending=True)
+        elif sort_by == "Name A-Z": view_df = view_df.sort_values('student_name' if 'student_name' in view_df.columns else view_df.columns[0])
+        elif sort_by == "Risk ↓": view_df = view_df.sort_values('ml_risk_probability', ascending=False)
+    else:
+        # Define empty dataframes if no data is found
+        df = pd.DataFrame()
+        view_df = pd.DataFrame()
 
     total = len(df)
-    avg_opi = df['overall_performance_index'].mean()
-    high_risk = (df['ml_risk_probability'] > 70).sum()
-    top_performers = (df['overall_performance_index'] >= 70).sum()
+    avg_opi = df['overall_performance_index'].mean() if not df.empty else 0
+    high_risk = (df['ml_risk_probability'] > 70).sum() if not df.empty else 0
+    top_performers = (df['overall_performance_index'] >= 70).sum() if not df.empty else 0
 
     c1, c2, c3, c4 = st.columns(4)
     with c1: st.markdown(f'<div class="metric-card"><div class="val">{total}</div><div class="label">Total Students</div></div>', unsafe_allow_html=True)
@@ -310,6 +343,11 @@ if uploaded:
     with c4: st.markdown(f'<div class="metric-card"><div class="val" style="color:#22c55e">{top_performers}</div><div class="label">Top Performers</div></div>', unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
+    
+    if view_df.empty:
+        st.info("No student data available to display.")
+        st.stop()
+        
     name_col = 'student_name' if 'student_name' in view_df.columns else view_df.columns[0]
     id_col = 'student_id' if 'student_id' in view_df.columns else None
 
