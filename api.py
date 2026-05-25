@@ -1,10 +1,20 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
 import json
-from app import process_df
+from app import process_df, generate_recs
 
 app = FastAPI()
+
+# Allow cross-origin requests from frontend development and production URLs
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class StudentData(BaseModel):
     students: list[dict]
@@ -23,6 +33,11 @@ def analyze_students(data: StudentData):
             if 'swot_json' in r:
                 r['swot'] = json.loads(r['swot_json'])
                 del r['swot_json']
+            
+            # Enrich records with priority actions and advisory recommendations
+            priority, recs = generate_recs(r)
+            r['priority_recs'] = priority
+            r['recs'] = recs
                 
         return {"status": "success", "data": records}
     except Exception as e:

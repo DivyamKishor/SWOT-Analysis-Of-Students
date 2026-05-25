@@ -55,7 +55,7 @@ def to_num(val, default=0):
 
 def calc_external(row):
     ext = to_num(row.get('avg_external_marks', 0))
-    ext_norm = (ext / 50.0) * 100.0
+    ext_norm = min(100.0, (ext / 50.0) * 100.0)
     cgpa = to_num(row.get('avg_cgpa', 0))
     score = (ext_norm * 0.60) + ((cgpa / 10.0) * 40.0)
     trend = str(row.get('cgpa_trend', '')).lower()
